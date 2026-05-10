@@ -23,7 +23,7 @@ func TestOnRegistersEventHandler(t *testing.T) {
 	})
 
 	called := false
-	On[map[string]string](b, "user.created", func(ctx context.Context, input map[string]string) error {
+	On(b, "user.created", func(ctx context.Context, input map[string]string) error {
 		called = true
 		return nil
 	})
