@@ -3,41 +3,52 @@ package ligo_microservices
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/linkeunid/ligo"
 )
 
-func TestProviderType(t *testing.T) {
-	p := Provider()
-	want := reflect.TypeFor[*Service]()
-	if p.Type() != want {
-		t.Fatalf("expected type %v, got %v", want, p.Type())
+func TestRabbitMQModuleName(t *testing.T) {
+	m := RabbitMQModule(RabbitMQConfig{
+		URL:      "amqp://guest:guest@localhost:5672/",
+		Exchange: "test",
+	})
+	if m.Name != "rabbitmq" {
+		t.Fatalf("module name: got %q, want %q", m.Name, "rabbitmq")
 	}
 }
 
-func TestModuleName(t *testing.T) {
-	m := Module()
-	if m.Name != "ligo_microservices" {
-		t.Fatalf("expected module name %q, got %q", "ligo_microservices", m.Name)
-	}
-}
-
-func TestModuleRegistersService(t *testing.T) {
-	m := Module()
-	want := reflect.TypeFor[*Service]()
+func TestRabbitMQModuleRegistersBroker(t *testing.T) {
+	m := RabbitMQModule(RabbitMQConfig{
+		URL:      "amqp://guest:guest@localhost:5672/",
+		Exchange: "test",
+	})
+	want := reflect.TypeFor[*Broker]()
 	for _, raw := range m.Providers {
 		if p, ok := raw.(ligo.Provider); ok && p.Type() == want {
 			return
 		}
 	}
-	t.Fatalf("Module must register *Service; providers: %v", m.Providers)
+	t.Fatal("module must register *Broker provider")
 }
 
-func TestModuleProviderType(t *testing.T) {
-	m := Module()
-	p := m.Providers[0].(ligo.Provider)
-	want := reflect.TypeFor[*Service]()
+func TestRabbitMQConfigDefaults(t *testing.T) {
+	b := NewBroker(RabbitMQConfig{
+		URL:      "amqp://guest:guest@localhost:5672/",
+		Exchange: "test",
+	})
+	if b.cfg.Codec == nil {
+		t.Fatal("default codec should be JSONCodec")
+	}
+	if b.cfg.Timeout != 5*time.Second {
+		t.Fatalf("default timeout: got %v, want 5s", b.cfg.Timeout)
+	}
+}
+
+func TestProviderReturnsBrokerType(t *testing.T) {
+	p := Provider()
+	want := reflect.TypeFor[*Broker]()
 	if p.Type() != want {
-		t.Fatalf("Module provider type: expected %v, got %v", want, p.Type())
+		t.Fatalf("provider type: got %v, want %v", p.Type(), want)
 	}
 }

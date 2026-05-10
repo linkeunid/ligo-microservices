@@ -2,7 +2,11 @@ module github.com/ligo-microservices
 
 go 1.25.9
 
-require github.com/linkeunid/ligo v0.5.0
+require (
+	github.com/linkeunid/ligo v0.6.0
+	github.com/rabbitmq/amqp091-go v1.11.0
+	google.golang.org/protobuf v1.36.11
+)
 
 require (
 	github.com/gabriel-vasile/mimetype v1.4.13 // indirect

@@ -1,42 +1,37 @@
 package ligo_microservices
 
-import "github.com/linkeunid/ligo"
+import (
+	"time"
 
-// Provider returns a [ligo.Provider] that registers a [*Service] as a
-// singleton in the DI container. Other factories declared in the same module
-// can then receive the service as an injected parameter.
-//
-// Use this inside your module's [ligo.Providers] list:
-//
-//	func MyModule() ligo.Module {
-//	    return ligo.NewModule("my",
-//	        ligo.Providers(
-//	            ligo_microservices.Provider(),
-//	            ligo.Factory[MyService](NewMyService),
-//	        ),
-//	    )
-//	}
-//
-// Accept the service in your constructor:
-//
-//	func NewMyService(svc *ligo_microservices.Service) MyService {
-//	    return &MyService{svc: svc}
-//	}
-func Provider() ligo.Provider {
-	return ligo.Factory[*Service](func() *Service {
-		return New()
-	})
+	"github.com/linkeunid/ligo"
+)
+
+// RabbitMQConfig holds configuration for the RabbitMQ transport.
+type RabbitMQConfig struct {
+	URL      string
+	Exchange string
+	Codec    Codec
+	Timeout  time.Duration
+	Retry    RetryConfig
 }
 
-// Module returns a Ligo module that registers a [*Service] as a singleton
-// provider via DI. It is a convenient drop-in for applications that need
-// basic ligo_microservices functionality.
-//
-//	app.Register(ligo_microservices.Module(), myModule())
-func Module() ligo.Module {
-	return ligo.NewModule("ligo_microservices",
+// RabbitMQModule returns a ligo module that registers a [*Broker] provider
+// with the given configuration. The broker connects during OnInit and
+// disconnects during OnShutdown.
+func RabbitMQModule(cfg RabbitMQConfig) ligo.Module {
+	return ligo.NewModule("rabbitmq",
 		ligo.Providers(
-			Provider(),
+			ligo.HookedFactory[*Broker](func() *Broker {
+				return NewBroker(cfg)
+			}),
 		),
 	)
+}
+
+// Provider returns a [ligo.Provider] that registers a [*Broker] as a singleton.
+// Use this when you need fine-grained control over module composition.
+func Provider() ligo.Provider {
+	return ligo.Factory[*Broker](func() *Broker {
+		return NewBroker(RabbitMQConfig{})
+	})
 }
