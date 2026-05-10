@@ -1,3 +1,153 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+/app
+/cmd/app/app
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.coverprofile
+/coverage.out
+/coverage.html
+/cp.out
+
+# Dependency directories
+/vendor/
+
+# Go workspace file
+/go.work
+
+# IDE and Editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+*.iml
+
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# JetBrains IDEs
+.idea/
+*.iml
+*.ipr
+*.iws
+.idea_modules/
+
+# Vim
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+
+# Emacs
+*~
+\#*\#
+.\#*
+Session.vim
+Sessionx.vim
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Windows
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+*.cache
+
+# Build artifacts
+/dist/
+/build/
+/bin/
+obj/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Certificate files
+*.pem
+*.key
+*.crt
+*.cert
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Profiling files
+*.prof
+/cpu.prof
+/mem.prof
+/block.prof
+
+# Debug files
+debug
+debug.test
+__debug_bin
+
+# Air live reload tool
+/tmp/
+.air.toml
+
+# Task runner
+.task/
+
+# Claude Code files (keep documentation)
 docs/superpowers
-docs/todos
 docs/pull-requests
+docs/todos
+# .claude/
+
+# Coverage
+coverage/
+*.cover
+coverage.html
+coverage.out.json
+
+# Benchmark results
+*.bench
+
+# Claude AI memory (optional - uncomment if you don't want to track AI memory)
+# memory/
+
+# Local development
+*.local
+local.*

@@ -1,4 +1,4 @@
-module github.com/ligo-microservices
+module github.com/linkeunid/ligo-microservices
 
 go 1.25.9
 

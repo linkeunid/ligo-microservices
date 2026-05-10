@@ -10,7 +10,7 @@ RabbitMQ-based microservices messaging for [Ligo](https://github.com/linkeunid/l
 ## Install
 
 ```bash
-go get github.com/ligo-microservices
+go get github.com/linkeunid/ligo-microservices
 ```
 
 ## Quick Start
@@ -22,7 +22,7 @@ import (
     "context"
     "time"
 
-    ligo_microservices "github.com/ligo-microservices"
+    ligo_microservices "github.com/linkeunid/ligo-microservices"
     "github.com/linkeunid/ligo"
 )
 
