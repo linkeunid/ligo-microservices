@@ -3,7 +3,7 @@ module github.com/linkeunid/ligo-microservices
 go 1.25.10
 
 require (
-	github.com/linkeunid/ligo v0.10.0
+	github.com/linkeunid/ligo v0.11.0
 	github.com/rabbitmq/amqp091-go v1.11.0
 	google.golang.org/protobuf v1.36.11
 )

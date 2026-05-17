@@ -16,8 +16,8 @@ github.com/labstack/echo/v5 v5.1.0 h1:MvIRydoN+p9cx/zq8Lff6YXqUW2ZaEsOMISzEGSMrB
 github.com/labstack/echo/v5 v5.1.0/go.mod h1:SyvlSdObGjRXeQfCCXW/sybkZdOOQZBmpKF0bvALaeo=
 github.com/leodido/go-urn v1.4.0 h1:WT9HwE9SGECu3lg4d/dIA+jxlljEa1/ffXKmRjqdmIQ=
 github.com/leodido/go-urn v1.4.0/go.mod h1:bvxc+MVxLKB4z00jd1z+Dvzr47oO32F/QSNjSBOlFxI=
-github.com/linkeunid/ligo v0.10.0 h1:ZOxGu4+ZqX+UFJPosXB9+U1+ZdT85FV69yc2FtF/kEQ=
-github.com/linkeunid/ligo v0.10.0/go.mod h1:MbwonMSzMEbm1raso3xLD/lxwtBevCgjmVUt9KDBGUw=
+github.com/linkeunid/ligo v0.11.0 h1:c3NPl9aXDRFNfGqIGYSfeZBsq2P8d2y1AY5oYYj15uc=
+github.com/linkeunid/ligo v0.11.0/go.mod h1:MbwonMSzMEbm1raso3xLD/lxwtBevCgjmVUt9KDBGUw=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/rabbitmq/amqp091-go v1.11.0 h1:HxIctVm9Gid/Vtn706necmZ7Wj6pgGI2eqplRbEY8O8=
