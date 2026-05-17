@@ -7,9 +7,19 @@ import (
 )
 
 // RabbitMQConfig holds configuration for the RabbitMQ transport.
+//
+// Queue controls the handler queue declaration:
+//
+//   - "" (default): server-generated name, exclusive, auto-delete, non-durable.
+//     One queue per broker instance; gone when the process exits. Good for
+//     ephemeral RPC clients and single-process demos.
+//   - non-empty: the given name, durable, non-exclusive, non-auto-delete.
+//     Survives restarts and can be shared by multiple consumers (worker
+//     pool / competing consumers).
 type RabbitMQConfig struct {
 	URL      string
 	Exchange string
+	Queue    string
 	Codec    Codec
 	Timeout  time.Duration
 	Retry    RetryConfig

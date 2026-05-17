@@ -36,7 +36,16 @@ func (b *Broker) connect() error {
 		return fmt.Errorf("microservices: exchange declare: %w", err)
 	}
 
-	queue, err := ch.QueueDeclare("", false, true, true, false, nil)
+	// Named queue → durable, non-exclusive, non-auto-delete (survives
+	// restarts, sharable across consumers). Empty name → server-generated,
+	// exclusive, auto-delete, non-durable (ephemeral per-process).
+	var (
+		qName      = b.cfg.Queue
+		durable    = qName != ""
+		exclusive  = qName == ""
+		autoDelete = qName == ""
+	)
+	queue, err := ch.QueueDeclare(qName, durable, autoDelete, exclusive, false, nil)
 	if err != nil {
 		return fmt.Errorf("microservices: queue declare: %w", err)
 	}
