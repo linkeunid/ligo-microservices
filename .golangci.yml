@@ -1,111 +1,120 @@
-# golangci-lint config shared across the ligo ecosystem.
-# Install: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-# Run:     golangci-lint run ./...
-
+version: "2"
 run:
-  timeout: 5m
   tests: true
-
 linters:
-  disable-all: true
+  default: none
   enable:
-    - errcheck       # unchecked errors
-    - govet          # canonical go vet + extras (see settings.govet.enable)
-    - ineffassign    # detect ineffectual assignments
-    - staticcheck    # bug-finding + style (SA / S / ST checks)
-    - unused         # unused funcs/vars/types
-    - gofumpt        # stricter gofmt (run with -extra)
-    - misspell       # common English misspellings
-    - unconvert      # unnecessary type conversions
-    - unparam        # unused function parameters
-    - revive         # lightweight successor to golint
-    - bodyclose      # http.Response.Body not closed
-    - errorlint      # errors.Is/As/wrapping correctness
-    - nolintlint     # //nolint directives must be valid
-    # Whitespace / indent uniformity
-    - whitespace     # leading/trailing newlines in funcs and blocks
-    - tagalign       # struct tag columns line up
-    - gci            # deterministic import groups + order
-
-linters-settings:
-  errcheck:
-    # `defer x.Close()` is idiomatic Go — checking the error on close is
-    # rarely actionable and adds noise. Same for write-side Fprintln to
-    # stderr/stdout and the buffer-backed writers that can't fail.
-    exclude-functions:
-      - (io.Closer).Close
-      - (io.ReadCloser).Close
-      - (*os.File).Close
-      - (*github.com/fsnotify/fsnotify.Watcher).Close
-      - fmt.Fprintln(os.Stderr)
-      - fmt.Fprint(os.Stderr)
-      - fmt.Fprintf(os.Stderr)
-      - fmt.Fprintln(os.Stdout)
-      - fmt.Fprint(os.Stdout)
-      - fmt.Fprintf(os.Stdout)
-  govet:
-    enable:
-      # Promote gopls's infertypeargs analyzer into the lint step so CI
-      # rejects calls like Handle[T, R](...) when T and R are inferable.
-      - infertypeargs
-      - shadow
-      - nilness
-      # fieldalignment intentionally off — its suggestions are micro-
-      # optimization noise that conflict with field-grouping for
-      # readability. Re-enable per package if pointer density matters.
-  gofumpt:
-    extra-rules: true
-  whitespace:
-    multi-if: true
-    multi-func: true
-  tagalign:
-    align: true
-    sort: true
-  gci:
-    # Group order: stdlib, default (3rd-party), local (this module).
-    # Replace "github.com/linkeunid/" with the consumer module's prefix in
-    # forks where this file is reused outside the linkeunid org.
-    sections:
-      - standard
-      - default
-      - prefix(github.com/linkeunid/ligo-microservices)
-    custom-order: true
-  staticcheck:
-    checks: ["all"]
-  revive:
-    # Keep revive focused on real bugs. Doc-style rules like "exported"
-    # and the stuttering-name complaint would force rename churn across
-    # already-released APIs — out of scope for a baseline linter config.
+    - bodyclose
+    - errcheck
+    - errorlint
+    - govet
+    - ineffassign
+    - misspell
+    - nolintlint
+    - revive
+    - staticcheck
+    - tagalign
+    - unconvert
+    - unparam
+    - unused
+    - whitespace
+  settings:
+    errcheck:
+      exclude-functions:
+        - (io.Closer).Close
+        - (io.ReadCloser).Close
+        - (*os.File).Close
+        - (*github.com/fsnotify/fsnotify.Watcher).Close
+        - fmt.Fprintln(os.Stderr)
+        - fmt.Fprint(os.Stderr)
+        - fmt.Fprintf(os.Stderr)
+        - fmt.Fprintln(os.Stdout)
+        - fmt.Fprint(os.Stdout)
+        - fmt.Fprintf(os.Stdout)
+    govet:
+      enable:
+        - shadow
+        - nilness
+      disable:
+        # The "inline" analyzer flags reflect.Ptr (deprecated alias for
+        # reflect.Pointer). The codebase predates reflect.Pointer and the
+        # rename is intentionally deferred — disable.
+        - inline
+    revive:
+      rules:
+        - name: var-naming
+        - name: superfluous-else
+        - name: unreachable-code
+        - name: redefines-builtin-id
+    staticcheck:
+      # `all` enables every check group (SA, ST, QF). Opt out of the
+      # style nag (ST1000 — every file wants a package comment) and the
+      # "quick-fix" suggestions group (QF1xxx — speculative refactors,
+      # not bug detection). Keep SA (bugs) and the remaining ST checks.
+      checks:
+        - all
+        - -ST1000
+        - -QF1011
+    tagalign:
+      align: true
+      sort: true
+    whitespace:
+      multi-if: true
+      multi-func: true
+  exclusions:
+    generated: lax
     rules:
-      - name: var-naming
-      - name: superfluous-else
-      - name: unreachable-code
-      - name: redefines-builtin-id
-
+      # Both revive (var-naming) and staticcheck (ST1003) complain about
+      # underscores in package names. Go technically permits them, and
+      # generated packages from kebab-case repo names (`ligo-microservices`
+      # → `ligo_microservices`) hit this — consumers almost always import
+      # with an alias anyway.
+      - linters:
+          - revive
+        text: don't use an underscore in package name
+      - linters:
+          - staticcheck
+        text: ST1003
+        source: ^package
+      - linters:
+          - errcheck
+          - govet
+          - revive
+          - staticcheck
+          - unused
+        path: internal/schematic/
+      - linters:
+          - errcheck
+          - fieldalignment
+          - unparam
+        path: _test\.go$
+    paths:
+      - internal/schematic
+      - ^docs/
+      - third_party$
+      - builtin$
+      - examples$
 issues:
-  # Schematic template directories contain {{.ModulePath}} placeholders
-  # that won't type-check until rendered. Exclude them from analysis.
-  exclude-dirs:
-    - internal/schematic
-  exclude-rules:
-    # Go technically permits underscores in package names, and the
-    # `ligo new-module my-foo` scaffolder generates `package my_foo`
-    # from the user's kebab-case input. Don't complain.
-    - text: "don't use an underscore in package name"
-      linters: [revive]
-    - path: internal/schematic/
-      linters:
-        - errcheck
-        - staticcheck
-        - unused
-        - govet
-        - revive
-    # Test files don't need fieldalignment / unparam noise.
-    - path: _test\.go$
-      linters:
-        - fieldalignment
-        - unparam
-        - errcheck
-  exclude-use-default: false
   max-issues-per-linter: 0
   max-same-issues: 0
+formatters:
+  enable:
+    - gci
+    - gofumpt
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/linkeunid/ligo-microservices)
+      custom-order: true
+    gofumpt:
+      extra-rules: true
+  exclusions:
+    generated: lax
+    paths:
+      - internal/schematic
+      - ^docs/
+      - third_party$
+      - builtin$
+      - examples$

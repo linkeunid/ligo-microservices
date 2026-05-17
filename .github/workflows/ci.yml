@@ -20,11 +20,12 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      # Linter config lives in .golangci.yml — infertypeargs, gci,
-      # gofumpt, errcheck, staticcheck, errorlint, … See ligo/CLAUDE.md.
-      - uses: golangci/golangci-lint-action@v6
+      # Linter config lives in .golangci.yml — gci, gofumpt, errcheck,
+      # govet (shadow / nilness), staticcheck, errorlint, tagalign, …
+      # See ligo/CLAUDE.md. Config schema is golangci-lint v2.
+      - uses: golangci/golangci-lint-action@v8
         with:
-          version: v1.64.8
+          version: v2.12.2
           args: --timeout=5m
 
   test:
