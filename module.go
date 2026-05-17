@@ -29,7 +29,8 @@ type RabbitMQConfig struct {
 // with the given configuration. The broker connects during OnInit and
 // disconnects during OnShutdown.
 func RabbitMQModule(cfg RabbitMQConfig) ligo.Module {
-	return ligo.NewModule("rabbitmq",
+	return ligo.NewModule(
+		"rabbitmq",
 		ligo.Providers(
 			ligo.HookedFactory[*Broker](func() *Broker {
 				return NewBroker(cfg)

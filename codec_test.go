@@ -51,8 +51,8 @@ type testProtoMessage struct {
 }
 
 func (m *testProtoMessage) Reset()         { *m = testProtoMessage{} }
-func (m *testProtoMessage) String() string  { return fmt.Sprintf("%+v", *m) }
-func (m *testProtoMessage) ProtoMessage()   {}
+func (m *testProtoMessage) String() string { return fmt.Sprintf("%+v", *m) }
+func (m *testProtoMessage) ProtoMessage()  {}
 
 func TestProtobufCodecRejectsNonProtoMessage(t *testing.T) {
 	input := struct{ Name string }{Name: "not-proto"}

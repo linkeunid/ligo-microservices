@@ -1,0 +1,88 @@
+# golangci-lint config shared across the ligo ecosystem.
+# Install: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+# Run:     golangci-lint run ./...
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  disable-all: true
+  enable:
+    - errcheck       # unchecked errors
+    - govet          # canonical go vet + extras (see settings.govet.enable)
+    - ineffassign    # detect ineffectual assignments
+    - staticcheck    # bug-finding + style (SA / S / ST checks)
+    - unused         # unused funcs/vars/types
+    - gofumpt        # stricter gofmt (run with -extra)
+    - misspell       # common English misspellings
+    - unconvert      # unnecessary type conversions
+    - unparam        # unused function parameters
+    - revive         # lightweight successor to golint
+    - bodyclose      # http.Response.Body not closed
+    - errorlint      # errors.Is/As/wrapping correctness
+    - nolintlint     # //nolint directives must be valid
+    # Whitespace / indent uniformity
+    - whitespace     # leading/trailing newlines in funcs and blocks
+    - tagalign       # struct tag columns line up
+    - gci            # deterministic import groups + order
+
+linters-settings:
+  govet:
+    enable:
+      # Promote gopls's infertypeargs analyzer into the lint step so CI
+      # rejects calls like Handle[T, R](...) when T and R are inferable.
+      - infertypeargs
+      - shadow
+      - nilness
+      # fieldalignment intentionally off — its suggestions are micro-
+      # optimization noise that conflict with field-grouping for
+      # readability. Re-enable per package if pointer density matters.
+  gofumpt:
+    extra-rules: true
+  whitespace:
+    multi-if: true
+    multi-func: true
+  tagalign:
+    align: true
+    sort: true
+  gci:
+    # Group order: stdlib, default (3rd-party), local (this module).
+    # Replace "github.com/linkeunid/" with the consumer module's prefix in
+    # forks where this file is reused outside the linkeunid org.
+    sections:
+      - standard
+      - default
+      - prefix(github.com/linkeunid/)
+    custom-order: true
+  staticcheck:
+    checks: ["all"]
+  revive:
+    # Keep revive focused on real bugs. Doc-style rules like "exported"
+    # and the stuttering-name complaint would force rename churn across
+    # already-released APIs — out of scope for a baseline linter config.
+    rules:
+      - name: var-naming
+      - name: superfluous-else
+      - name: unreachable-code
+      - name: redefines-builtin-id
+
+issues:
+  exclude-rules:
+    # Generated / template Go files in CLI schematics are not real packages.
+    - path: internal/schematic/
+      linters:
+        - errcheck
+        - staticcheck
+        - unused
+        - govet
+        - revive
+    # Test files don't need fieldalignment / unparam noise.
+    - path: _test\.go$
+      linters:
+        - fieldalignment
+        - unparam
+        - errcheck
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0

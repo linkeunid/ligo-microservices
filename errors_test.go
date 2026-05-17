@@ -26,9 +26,9 @@ func TestBrokerErrorIsDetectedByErrorsAs(t *testing.T) {
 
 func TestErrorConstructors(t *testing.T) {
 	cases := []struct {
-		err  *BrokerError
-		typ  string
-		msg  string
+		err *BrokerError
+		typ string
+		msg string
 	}{
 		{NotFound("x"), "NotFound", "x"},
 		{Validation("y"), "Validation", "y"},

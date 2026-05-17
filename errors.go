@@ -20,4 +20,6 @@ func Validation(msg string) *BrokerError { return &BrokerError{Type: "Validation
 func Timeout(msg string) *BrokerError { return &BrokerError{Type: "Timeout", Message: msg} }
 
 // Internal creates an "Internal" broker error.
-func Internal(msg string) *BrokerError { return &BrokerError{Type: "Internal", Message: fmt.Sprintf("internal error: %s", msg)} }
+func Internal(msg string) *BrokerError {
+	return &BrokerError{Type: "Internal", Message: fmt.Sprintf("internal error: %s", msg)}
+}

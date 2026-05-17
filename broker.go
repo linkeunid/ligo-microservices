@@ -7,6 +7,7 @@ import (
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
+
 	"github.com/linkeunid/ligo"
 )
 
