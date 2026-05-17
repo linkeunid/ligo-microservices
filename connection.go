@@ -85,11 +85,13 @@ func (b *Broker) sendResponse(resp response, replyTo, correlationID string) {
 	if err != nil {
 		return
 	}
+	b.chMu.Lock()
 	b.ch.PublishWithContext(context.Background(), "", replyTo, false, false, amqp.Publishing{
 		ContentType:   "application/json",
 		CorrelationId: correlationID,
 		Body:          body,
 	})
+	b.chMu.Unlock()
 }
 
 func (b *Broker) sendErrorResponse(id, replyTo, correlationID, errType, errMsg string) {

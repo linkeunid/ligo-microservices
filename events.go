@@ -25,11 +25,14 @@ func Emit(ctx context.Context, b *Broker, pattern string, payload any) error {
 		return fmt.Errorf("microservices: marshal: %w", err)
 	}
 
-	if err := b.ch.PublishWithContext(ctx, b.cfg.Exchange, pattern, false, false, amqp.Publishing{
+	b.chMu.Lock()
+	pubErr := b.ch.PublishWithContext(ctx, b.cfg.Exchange, pattern, false, false, amqp.Publishing{
 		ContentType: "application/json",
 		Body:        body,
-	}); err != nil {
-		return fmt.Errorf("microservices: publish: %w", err)
+	})
+	b.chMu.Unlock()
+	if pubErr != nil {
+		return fmt.Errorf("microservices: publish: %w", pubErr)
 	}
 
 	return nil

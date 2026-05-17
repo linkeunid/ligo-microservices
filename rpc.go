@@ -51,13 +51,16 @@ func Send[T any](ctx context.Context, b *Broker, pattern string, payload any) (T
 		b.mu.Unlock()
 	}()
 
-	if err := b.ch.PublishWithContext(ctx, b.cfg.Exchange, pattern, false, false, amqp.Publishing{
+	b.chMu.Lock()
+	pubErr := b.ch.PublishWithContext(ctx, b.cfg.Exchange, pattern, false, false, amqp.Publishing{
 		ContentType:   "application/json",
 		CorrelationId: id,
 		ReplyTo:       "amq.rabbitmq.reply-to",
 		Body:          body,
-	}); err != nil {
-		return zero, fmt.Errorf("microservices: publish: %w", err)
+	})
+	b.chMu.Unlock()
+	if pubErr != nil {
+		return zero, fmt.Errorf("microservices: publish: %w", pubErr)
 	}
 
 	timeout := b.cfg.Timeout

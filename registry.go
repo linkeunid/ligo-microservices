@@ -30,7 +30,10 @@ func (b *Broker) bindPattern(pattern string) {
 	if b.ch == nil {
 		return
 	}
-	if err := b.ch.QueueBind(b.handlerQueue, pattern, b.cfg.Exchange, false, nil); err != nil {
+	b.chMu.Lock()
+	err := b.ch.QueueBind(b.handlerQueue, pattern, b.cfg.Exchange, false, nil)
+	b.chMu.Unlock()
+	if err != nil {
 		panic(fmt.Sprintf("microservices: bind %s: %v", pattern, err))
 	}
 }

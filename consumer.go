@@ -10,7 +10,9 @@ import (
 )
 
 func (b *Broker) consumeReplies(ctx context.Context) {
+	b.chMu.Lock()
 	deliveries, err := b.ch.Consume("amq.rabbitmq.reply-to", "", true, false, false, false, nil)
+	b.chMu.Unlock()
 	if err != nil {
 		return
 	}
@@ -37,7 +39,9 @@ func (b *Broker) consumeReplies(ctx context.Context) {
 }
 
 func (b *Broker) consumeHandlers(ctx context.Context) {
+	b.chMu.Lock()
 	deliveries, err := b.ch.Consume(b.handlerQueue, "", false, false, false, false, nil)
+	b.chMu.Unlock()
 	if err != nil {
 		return
 	}
@@ -57,7 +61,7 @@ func (b *Broker) consumeHandlers(ctx context.Context) {
 func (b *Broker) handleMessage(msg amqp.Delivery) {
 	var env envelope
 	if err := json.Unmarshal(msg.Body, &env); err != nil {
-		msg.Nack(false, false)
+		b.nack(msg, false, false)
 		return
 	}
 
@@ -69,7 +73,7 @@ func (b *Broker) handleMessage(msg amqp.Delivery) {
 	if !hasRPC && !hasEvent {
 		b.sendErrorResponse(env.ID, msg.ReplyTo, msg.CorrelationId,
 			"NO_HANDLER", fmt.Sprintf("no handler for %q", env.Pattern))
-		msg.Ack(false)
+		b.ack(msg, false)
 		return
 	}
 
@@ -101,14 +105,28 @@ func (b *Broker) handleMessage(msg amqp.Delivery) {
 		if msg.ReplyTo != "" {
 			b.sendResponse(resp, msg.ReplyTo, msg.CorrelationId)
 		}
-		msg.Ack(false)
+		b.ack(msg, false)
 		return
 	}
 
 	_, err := eventEntry.invoke(ctx, env.Data, b.cfg.Codec)
 	if err != nil {
-		msg.Nack(false, false)
+		b.nack(msg, false, false)
 		return
 	}
-	msg.Ack(false)
+	b.ack(msg, false)
+}
+
+// ack/nack serialize Delivery acknowledgement frames on b.ch alongside other
+// channel writes.
+func (b *Broker) ack(msg amqp.Delivery, multiple bool) {
+	b.chMu.Lock()
+	msg.Ack(multiple)
+	b.chMu.Unlock()
+}
+
+func (b *Broker) nack(msg amqp.Delivery, multiple, requeue bool) {
+	b.chMu.Lock()
+	msg.Nack(multiple, requeue)
+	b.chMu.Unlock()
 }

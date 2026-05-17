@@ -21,7 +21,14 @@ type Broker struct {
 	pending       map[string]chan *response
 	handlerQueue  string
 	mu            sync.Mutex
-	cancel        context.CancelFunc
+	// chMu serializes writes on b.ch. amqp091 channels are not safe for
+	// concurrent use: Publish, QueueBind, Consume setup, etc. each send
+	// frames and races corrupt the channel state (RabbitMQ closes it with
+	// 503 "unexpected command received"). Acquire chMu around every method
+	// call on b.ch — consumer goroutines only read from the deliveries
+	// channel returned by Consume, so they do not need to hold it.
+	chMu   sync.Mutex
+	cancel context.CancelFunc
 }
 
 func NewBroker(cfg RabbitMQConfig) *Broker {
