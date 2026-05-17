@@ -121,12 +121,12 @@ func (b *Broker) handleMessage(msg amqp.Delivery) {
 // channel writes.
 func (b *Broker) ack(msg amqp.Delivery, multiple bool) {
 	b.chMu.Lock()
-	msg.Ack(multiple)
+	_ = msg.Ack(multiple)
 	b.chMu.Unlock()
 }
 
 func (b *Broker) nack(msg amqp.Delivery, multiple, requeue bool) {
 	b.chMu.Lock()
-	msg.Nack(multiple, requeue)
+	_ = msg.Nack(multiple, requeue)
 	b.chMu.Unlock()
 }

@@ -37,6 +37,12 @@ func (c *RetryConfig) backoff(attempt int) time.Duration {
 	return d
 }
 
+// watchConnection / rebindAll are part of an in-progress auto-reconnect
+// path that is not yet wired into the broker lifecycle. Kept here as the
+// reference implementation; will be activated once we have a story for
+// in-flight RPCs across a reconnect.
+//
+//nolint:unused // reconnect path WIP
 func (b *Broker) watchConnection(ctx context.Context) {
 	closeCh := b.conn.NotifyClose(make(chan *amqp.Error, 1))
 	for {
@@ -53,6 +59,7 @@ func (b *Broker) watchConnection(ctx context.Context) {
 	}
 }
 
+//nolint:unused // reconnect path WIP — see watchConnection
 func (b *Broker) reconnect(ctx context.Context, amqpErr *amqp.Error) {
 	cfg := b.cfg.Retry
 	cfg.applyDefaults()
@@ -82,6 +89,7 @@ func (b *Broker) reconnect(ctx context.Context, amqpErr *amqp.Error) {
 	}
 }
 
+//nolint:unused // reconnect path WIP — see watchConnection
 func (b *Broker) rebindAll() error {
 	b.mu.Lock()
 	defer b.mu.Unlock()

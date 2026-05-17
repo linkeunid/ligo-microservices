@@ -32,8 +32,8 @@ func (b *Broker) connect() error {
 	}
 	b.ch = ch
 
-	if err := ch.ExchangeDeclare(b.cfg.Exchange, "topic", true, false, false, false, nil); err != nil {
-		return fmt.Errorf("microservices: exchange declare: %w", err)
+	if exchErr := ch.ExchangeDeclare(b.cfg.Exchange, "topic", true, false, false, false, nil); exchErr != nil {
+		return fmt.Errorf("microservices: exchange declare: %w", exchErr)
 	}
 
 	// Named queue → durable, non-exclusive, non-auto-delete (survives
@@ -86,7 +86,7 @@ func (b *Broker) sendResponse(resp response, replyTo, correlationID string) {
 		return
 	}
 	b.chMu.Lock()
-	b.ch.PublishWithContext(context.Background(), "", replyTo, false, false, amqp.Publishing{
+	_ = b.ch.PublishWithContext(context.Background(), "", replyTo, false, false, amqp.Publishing{
 		ContentType:   "application/json",
 		CorrelationId: correlationID,
 		Body:          body,

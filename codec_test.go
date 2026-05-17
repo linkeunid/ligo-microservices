@@ -2,7 +2,6 @@ package ligo_microservices
 
 import (
 	"encoding/json"
-	"fmt"
 	"testing"
 )
 
@@ -44,15 +43,6 @@ func TestJSONCodecEncodeReturnsJSON(t *testing.T) {
 		t.Errorf("got %q, want %q", got["key"], "value")
 	}
 }
-
-type testProtoMessage struct {
-	Name  string
-	Value int32
-}
-
-func (m *testProtoMessage) Reset()         { *m = testProtoMessage{} }
-func (m *testProtoMessage) String() string { return fmt.Sprintf("%+v", *m) }
-func (m *testProtoMessage) ProtoMessage()  {}
 
 func TestProtobufCodecRejectsNonProtoMessage(t *testing.T) {
 	input := struct{ Name string }{Name: "not-proto"}

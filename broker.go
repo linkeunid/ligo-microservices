@@ -6,9 +6,8 @@ import (
 	"sync"
 	"time"
 
-	amqp "github.com/rabbitmq/amqp091-go"
-
 	"github.com/linkeunid/ligo"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 var ErrNotConnected = errors.New("microservices: broker not connected")

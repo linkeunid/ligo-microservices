@@ -28,6 +28,21 @@ linters:
     - gci            # deterministic import groups + order
 
 linters-settings:
+  errcheck:
+    # `defer x.Close()` is idiomatic Go — checking the error on close is
+    # rarely actionable and adds noise. Same for write-side Fprintln to
+    # stderr/stdout and the buffer-backed writers that can't fail.
+    exclude-functions:
+      - (io.Closer).Close
+      - (io.ReadCloser).Close
+      - (*os.File).Close
+      - (*github.com/fsnotify/fsnotify.Watcher).Close
+      - fmt.Fprintln(os.Stderr)
+      - fmt.Fprint(os.Stderr)
+      - fmt.Fprintf(os.Stderr)
+      - fmt.Fprintln(os.Stdout)
+      - fmt.Fprint(os.Stdout)
+      - fmt.Fprintf(os.Stdout)
   govet:
     enable:
       # Promote gopls's infertypeargs analyzer into the lint step so CI
@@ -53,7 +68,7 @@ linters-settings:
     sections:
       - standard
       - default
-      - prefix(github.com/linkeunid/)
+      - prefix(github.com/linkeunid/ligo-microservices)
     custom-order: true
   staticcheck:
     checks: ["all"]
@@ -68,8 +83,16 @@ linters-settings:
       - name: redefines-builtin-id
 
 issues:
+  # Schematic template directories contain {{.ModulePath}} placeholders
+  # that won't type-check until rendered. Exclude them from analysis.
+  exclude-dirs:
+    - internal/schematic
   exclude-rules:
-    # Generated / template Go files in CLI schematics are not real packages.
+    # Go technically permits underscores in package names, and the
+    # `ligo new-module my-foo` scaffolder generates `package my_foo`
+    # from the user's kebab-case input. Don't complain.
+    - text: "don't use an underscore in package name"
+      linters: [revive]
     - path: internal/schematic/
       linters:
         - errcheck
