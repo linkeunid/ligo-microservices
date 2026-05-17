@@ -15,15 +15,15 @@ jobs:
     name: golangci-lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
           cache: true
       # Linter config lives in .golangci.yml — gci, gofumpt, errcheck,
       # govet (shadow / nilness), staticcheck, errorlint, tagalign, …
       # See ligo/CLAUDE.md. Config schema is golangci-lint v2.
-      - uses: golangci/golangci-lint-action@v8
+      - uses: golangci/golangci-lint-action@v9
         with:
           version: v2.12.2
           args: --timeout=5m
@@ -32,8 +32,8 @@ jobs:
     name: go test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
           cache: true
@@ -44,8 +44,8 @@ jobs:
     name: govulncheck
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
           cache: true
