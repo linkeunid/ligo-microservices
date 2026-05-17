@@ -1,6 +1,8 @@
 package ligo_microservices
 
 import (
+	"context"
+	"errors"
 	"testing"
 	"time"
 )
@@ -50,6 +52,38 @@ func TestRebindAllIteratesBothMaps(t *testing.T) {
 
 	if len(bindPatterns) != 2 {
 		t.Fatalf("patterns: got %d, want 2", len(bindPatterns))
+	}
+}
+
+func TestRebindAllReturnsErrNotConnected(t *testing.T) {
+	b := NewBroker(RabbitMQConfig{Exchange: "test"})
+	b.handlers["rpc.test"] = handlerEntry{}
+
+	err := b.rebindAll()
+	if !errors.Is(err, ErrNotConnected) {
+		t.Fatalf("rebindAll without channel: got %v, want wrapped ErrNotConnected", err)
+	}
+}
+
+func TestReconnectShortCircuitsAfterClose(t *testing.T) {
+	// closed.Store(true) must abort the retry loop before any
+	// connect attempt is made — that's the user-shutdown invariant.
+	b := NewBroker(RabbitMQConfig{
+		URL:      "amqp://invalid-host-that-cannot-resolve:5672/",
+		Exchange: "test",
+		Retry:    RetryConfig{MaxAttempts: 1000, Delay: time.Hour, MaxDelay: time.Hour},
+	})
+	b.closed.Store(true)
+
+	done := make(chan struct{})
+	go func() {
+		b.reconnect(context.Background(), nil)
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("reconnect did not honor closed flag (would have blocked on backoff)")
 	}
 }
 

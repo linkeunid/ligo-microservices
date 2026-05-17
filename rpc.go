@@ -24,9 +24,6 @@ func Handle[T, R any](b *Broker, pattern string, handler func(ctx context.Contex
 
 func Send[T any](ctx context.Context, b *Broker, pattern string, payload any) (T, error) {
 	var zero T
-	if b.ch == nil {
-		return zero, ErrNotConnected
-	}
 
 	data, err := b.cfg.Codec.Encode(payload)
 	if err != nil {
@@ -52,6 +49,10 @@ func Send[T any](ctx context.Context, b *Broker, pattern string, payload any) (T
 	}()
 
 	b.chMu.Lock()
+	if b.ch == nil {
+		b.chMu.Unlock()
+		return zero, ErrNotConnected
+	}
 	pubErr := b.ch.PublishWithContext(ctx, b.cfg.Exchange, pattern, false, false, amqp.Publishing{
 		ContentType:   "application/json",
 		CorrelationId: id,
@@ -68,7 +69,13 @@ func Send[T any](ctx context.Context, b *Broker, pattern string, payload any) (T
 	defer cancel()
 
 	select {
-	case resp := <-ch:
+	case resp, ok := <-ch:
+		// Reconnect drains b.pending by closing the per-request reply
+		// channel — `ok == false` means the connection dropped before
+		// the response landed.
+		if !ok || resp == nil {
+			return zero, ErrConnectionLost
+		}
 		if resp.Err != "" {
 			return zero, &BrokerError{Type: resp.ErrType, Message: resp.Err}
 		}

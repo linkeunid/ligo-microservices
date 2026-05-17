@@ -9,8 +9,25 @@ import (
 )
 
 func (b *Broker) connect() error {
-	if b.cancel != nil {
-		b.cancel()
+	// Tear down any previous lifecycle. cancel() makes the old consumer
+	// and watcher goroutines exit; pending RPC callers see their reply
+	// channel close and surface ErrConnectionLost.
+	b.chMu.Lock()
+	oldCancel := b.cancel
+	oldCh := b.ch
+	oldConn := b.conn
+	b.cancel = nil
+	b.ch = nil
+	b.conn = nil
+	b.chMu.Unlock()
+	if oldCancel != nil {
+		oldCancel()
+	}
+	if oldCh != nil {
+		_ = oldCh.Close()
+	}
+	if oldConn != nil {
+		_ = oldConn.Close()
 	}
 
 	b.mu.Lock()
@@ -24,15 +41,16 @@ func (b *Broker) connect() error {
 	if err != nil {
 		return fmt.Errorf("microservices: dial: %w", err)
 	}
-	b.conn = conn
 
 	ch, err := conn.Channel()
 	if err != nil {
+		_ = conn.Close()
 		return fmt.Errorf("microservices: channel: %w", err)
 	}
-	b.ch = ch
 
 	if exchErr := ch.ExchangeDeclare(b.cfg.Exchange, "topic", true, false, false, false, nil); exchErr != nil {
+		_ = ch.Close()
+		_ = conn.Close()
 		return fmt.Errorf("microservices: exchange declare: %w", exchErr)
 	}
 
@@ -47,33 +65,53 @@ func (b *Broker) connect() error {
 	)
 	queue, err := ch.QueueDeclare(qName, durable, autoDelete, exclusive, false, nil)
 	if err != nil {
+		_ = ch.Close()
+		_ = conn.Close()
 		return fmt.Errorf("microservices: queue declare: %w", err)
 	}
-	b.handlerQueue = queue.Name
 
+	// Publish new state under chMu so concurrent Send/bindPattern observe
+	// a coherent (conn, ch, handlerQueue) triple.
 	ctx, cancel := context.WithCancel(context.Background())
+	b.chMu.Lock()
+	b.conn = conn
+	b.ch = ch
+	b.handlerQueue = queue.Name
 	b.cancel = cancel
+	b.chMu.Unlock()
 
 	go b.consumeReplies(ctx)
 	go b.consumeHandlers(ctx)
+	// Arm the watcher last so it only fires once the consumers are up.
+	go b.watchConnection(ctx)
 
 	return nil
 }
 
 func (b *Broker) disconnect() error {
-	if b.cancel != nil {
-		b.cancel()
-		b.cancel = nil
+	// Flip the closed flag first so the watcher goroutine — which may
+	// fire mid-disconnect when amqp.Connection.Close triggers
+	// NotifyClose — sees it and skips the reconnect path.
+	b.closed.Store(true)
+
+	b.chMu.Lock()
+	cancel := b.cancel
+	ch := b.ch
+	conn := b.conn
+	b.cancel = nil
+	b.ch = nil
+	b.conn = nil
+	b.chMu.Unlock()
+
+	if cancel != nil {
+		cancel()
 	}
 	var err error
-	if b.ch != nil {
-		err = b.ch.Close()
-		b.ch = nil
+	if ch != nil {
+		err = ch.Close()
 	}
-	if b.conn != nil {
-		e := b.conn.Close()
-		b.conn = nil
-		if err == nil {
+	if conn != nil {
+		if e := conn.Close(); err == nil {
 			err = e
 		}
 	}
@@ -86,11 +124,13 @@ func (b *Broker) sendResponse(resp response, replyTo, correlationID string) {
 		return
 	}
 	b.chMu.Lock()
-	_ = b.ch.PublishWithContext(context.Background(), "", replyTo, false, false, amqp.Publishing{
-		ContentType:   "application/json",
-		CorrelationId: correlationID,
-		Body:          body,
-	})
+	if b.ch != nil {
+		_ = b.ch.PublishWithContext(context.Background(), "", replyTo, false, false, amqp.Publishing{
+			ContentType:   "application/json",
+			CorrelationId: correlationID,
+			Body:          body,
+		})
+	}
 	b.chMu.Unlock()
 }
 

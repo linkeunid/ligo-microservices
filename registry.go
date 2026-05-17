@@ -27,13 +27,14 @@ func registerEventHandler(b *Broker, pattern string, entry handlerEntry) {
 }
 
 func (b *Broker) bindPattern(pattern string) {
+	b.chMu.Lock()
+	defer b.chMu.Unlock()
 	if b.ch == nil {
+		// Handlers registered before connect() are bound later by
+		// rebindAll() once the channel is up.
 		return
 	}
-	b.chMu.Lock()
-	err := b.ch.QueueBind(b.handlerQueue, pattern, b.cfg.Exchange, false, nil)
-	b.chMu.Unlock()
-	if err != nil {
+	if err := b.ch.QueueBind(b.handlerQueue, pattern, b.cfg.Exchange, false, nil); err != nil {
 		panic(fmt.Sprintf("microservices: bind %s: %v", pattern, err))
 	}
 }

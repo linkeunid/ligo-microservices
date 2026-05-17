@@ -37,71 +37,90 @@ func (c *RetryConfig) backoff(attempt int) time.Duration {
 	return d
 }
 
-// watchConnection / rebindAll are part of an in-progress auto-reconnect
-// path that is not yet wired into the broker lifecycle. Kept here as the
-// reference implementation; will be activated once we have a story for
-// in-flight RPCs across a reconnect.
-//
-//nolint:unused // reconnect path WIP
+// watchConnection blocks until either the parent ctx is canceled (user-
+// initiated shutdown) or the AMQP server closes the connection. In the
+// latter case it hands off to reconnect; it never restarts itself —
+// the fresh watcher is armed at the end of a successful connect().
 func (b *Broker) watchConnection(ctx context.Context) {
-	closeCh := b.conn.NotifyClose(make(chan *amqp.Error, 1))
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case amqpErr, ok := <-closeCh:
-			if !ok {
-				return
-			}
-			b.reconnect(ctx, amqpErr)
+	b.chMu.Lock()
+	conn := b.conn
+	b.chMu.Unlock()
+	if conn == nil {
+		return
+	}
+	closeCh := conn.NotifyClose(make(chan *amqp.Error, 1))
+
+	select {
+	case <-ctx.Done():
+		return
+	case amqpErr, ok := <-closeCh:
+		if !ok || b.closed.Load() {
+			// User-initiated shutdown — nothing to do.
 			return
 		}
+		b.reconnect(ctx, amqpErr)
 	}
 }
 
-//nolint:unused // reconnect path WIP — see watchConnection
-func (b *Broker) reconnect(ctx context.Context, amqpErr *amqp.Error) {
+// reconnect retries connect() with exponential backoff. Each successful
+// connect() already arms a fresh watcher, so reconnect just returns
+// after the first success.
+func (b *Broker) reconnect(_ context.Context, amqpErr *amqp.Error) {
 	cfg := b.cfg.Retry
 	cfg.applyDefaults()
 
 	for attempt := 0; attempt < cfg.MaxAttempts; attempt++ {
+		if b.closed.Load() {
+			return
+		}
 		if cfg.OnRetry != nil {
 			cfg.OnRetry(attempt, amqpErr)
 		}
 
 		time.Sleep(cfg.backoff(attempt))
+		if b.closed.Load() {
+			return
+		}
 
 		if err := b.connect(); err != nil {
 			continue
 		}
-
 		if err := b.rebindAll(); err != nil {
+			// Channel up but binds failed. The next connect() will cancel
+			// the current ctx and tear down conn/ch via its leading
+			// cleanup; loop on to retry from scratch.
 			continue
 		}
 
 		if cfg.OnReconnect != nil {
 			cfg.OnReconnect()
 		}
-
-		// Watch the new connection for future disconnects.
-		go b.watchConnection(ctx)
 		return
 	}
 }
 
-//nolint:unused // reconnect path WIP — see watchConnection
+// rebindAll re-issues QueueBind for every registered RPC and event
+// pattern. Called after a reconnect to restore routing to the (new)
+// handler queue.
 func (b *Broker) rebindAll() error {
 	b.mu.Lock()
-	defer b.mu.Unlock()
-
+	patterns := make([]string, 0, len(b.handlers)+len(b.eventHandlers))
 	for pattern := range b.handlers {
-		if err := b.ch.QueueBind(b.handlerQueue, pattern, b.cfg.Exchange, false, nil); err != nil {
-			return fmt.Errorf("microservices: rebind %s: %w", pattern, err)
-		}
+		patterns = append(patterns, pattern)
 	}
 	for pattern := range b.eventHandlers {
+		patterns = append(patterns, pattern)
+	}
+	b.mu.Unlock()
+
+	b.chMu.Lock()
+	defer b.chMu.Unlock()
+	if b.ch == nil {
+		return fmt.Errorf("microservices: rebind: %w", ErrNotConnected)
+	}
+	for _, pattern := range patterns {
 		if err := b.ch.QueueBind(b.handlerQueue, pattern, b.cfg.Exchange, false, nil); err != nil {
-			return fmt.Errorf("microservices: rebind event %s: %w", pattern, err)
+			return fmt.Errorf("microservices: rebind %s: %w", pattern, err)
 		}
 	}
 	return nil
