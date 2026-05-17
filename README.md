@@ -175,6 +175,12 @@ if errors.As(err, &brokerErr) {
 
 ## Reconnection
 
+Available since **v0.2.0**. On a server-initiated `NotifyClose`, the
+broker walks `RetryConfig` with exponential backoff, re-establishes the
+AMQP connection and channel, re-declares the exchange and queue, and
+re-binds every registered RPC and event pattern. Handlers survive the
+cycle without restart.
+
 ```go
 RabbitMQConfig{
     Retry: ligo_microservices.RetryConfig{
@@ -190,6 +196,29 @@ RabbitMQConfig{
     },
 }
 ```
+
+### In-flight `Send` calls
+
+When the connection drops mid-request, `Send` returns
+`ErrConnectionLost` instead of waiting out the timeout (or panicking on
+the now-closed reply channel — fixed in v0.2.0). Callers should treat
+it the same way as a transient broker error:
+
+```go
+result, err := microservices.Send[*Order](ctx, broker, "orders.get", req)
+switch {
+case errors.Is(err, microservices.ErrConnectionLost):
+    // broker is reconnecting — retry with backoff
+case errors.Is(err, microservices.ErrNotConnected):
+    // broker has been shut down — do not retry
+case err != nil:
+    // protocol / handler error — surface to caller
+}
+```
+
+User-initiated `Shutdown` flips an internal closed flag so the
+reconnect loop short-circuits — your app won't keep trying to dial a
+broker you're walking away from.
 
 ## Codec
 
